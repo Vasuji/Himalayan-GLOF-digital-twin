@@ -252,5 +252,4 @@ agency before an output reaches a person downstream.
 ---
 
 ## License
-
-Apache-2.0.
+MIT
