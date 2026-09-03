@@ -15,7 +15,7 @@ Earth-2 forecast  →  CorrDiff downscaling  →  catchment melt and lake fillin
                  with ensemble Kalman assimilation of an in-situ network
 ```
 
-![img](workflow.png)
+![img](workflow.jpg)
 
 ---
 
