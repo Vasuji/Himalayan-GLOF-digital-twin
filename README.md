@@ -26,7 +26,6 @@ Earth-2 forecast  →  CorrDiff downscaling  →  catchment melt and lake fillin
 
 ---
 
-## PhysicsNeMo is required, not optional
 
 PhysicsNeMo supplies every neural component of the twin, and both tiers require
 it. Model construction is centralised in `glof_pipeline/backends.py`, which raises
