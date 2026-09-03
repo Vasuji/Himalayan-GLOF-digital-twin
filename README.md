@@ -1,5 +1,12 @@
 # Himalayan GLOF digital twin
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Framework: PyTorch](https://img.shields.io/badge/Framework-PyTorch-ee4c2c.svg)](https://pytorch.org/)
+[![NVIDIA Earth-2](https://img.shields.io/badge/NVIDIA-Earth--2-76b900.svg)](https://developer.nvidia.com/earth-2)
+[![NVIDIA PhysicsNeMo](https://img.shields.io/badge/NVIDIA-PhysicsNeMo-76b900.svg)](https://developer.nvidia.com/)
+[![NVIDIA Omniverse](https://img.shields.io/badge/NVIDIA-Omniverse-76b900.svg)](https://developer.nvidia.com/omniverse)
+[![Tests](https://img.shields.io/badge/pytest-passing-brightgreen.svg)](https://github.com/)
+
 An end-to-end digital twin for **glacial lake outburst floods** in the Hindu Kush
 Himalaya, built on **NVIDIA Earth-2** (`earth2studio`) for the atmosphere,
 **NVIDIA PhysicsNeMo** (`physicsnemo`) for the neural surrogates and generative
