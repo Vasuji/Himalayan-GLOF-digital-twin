@@ -1,0 +1,37 @@
+# ---------------------------------------------------------------------------
+# Shallow-water flood routing: reference finite-volume solver and FNO surrogate.
+# ---------------------------------------------------------------------------
+routing:
+  physics:
+    gravity: 9.81
+    manning_n: 0.045             # boulder-bed mountain channel
+    dry_depth_m: 1.0e-3          # wet/dry threshold
+    cfl: 0.45
+    min_depth_for_velocity_m: 1.0e-3
+  solver:
+    scheme: hll                  # first-order Godunov, HLL flux
+    well_balanced: true          # hydrostatic reconstruction (Audusse et al. 2004)
+    boundary: outflow            # outflow | wall
+    horizon_hours: 3.0
+    output_interval_s: 120.0
+    max_steps: 400000
+  # Depth below which a cell is not reported as inundated.
+  inundation_threshold_m: 0.30
+
+surrogates:
+  fno:
+    # PhysicsNeMo FNO (physicsnemo.models.fno.FNO). Learns the time-advance
+    # operator over one output interval: (h, hu, hv, z_bed) -> (h, hu, hv).
+    in_channels: 4
+    out_channels: 3
+    dimension: 2
+    num_fno_layers: 4
+    num_fno_modes: 16            # production: 32
+    latent_channels: 32          # production: 64
+    decoder_layers: 2
+    decoder_layer_size: 64
+    padding: 4
+    coord_features: true
+    train_resolution: 64         # trained coarse, applied at solver resolution
+    rollout_steps: 12            # autoregressive steps used during training
+    checkpoint: checkpoints/fno_swe.pt

@@ -1,0 +1,101 @@
+# ---------------------------------------------------------------------------
+# Atmospheric forcing and generative downscaling.
+#
+# toy tier        : synthetic coarse fields from a stochastic orographic model.
+# production tier : Earth2Studio (>=0.18) prognostic model + CorrDiff downscaler.
+# ---------------------------------------------------------------------------
+atmosphere:
+  target_region:
+    name: South_Lhonak_like
+    lat_min: 27.80
+    lat_max: 28.05
+    lon_min: 88.10
+    lon_max: 88.40
+    # Reference elevation of the lake surface, used to lapse-correct coarse T2M.
+    reference_elevation_m: 5200.0
+
+  # Earth2Studio data source. One of: GFS, GFS_FX, ARCO, IFS, HRRR, NCAR_ERA5, CDS.
+  data_source: GFS
+
+  # Earth2Studio prognostic model (earth2studio.models.px).
+  # One of: FCN3, SFNO, GraphCastOperational, GraphCastSmall, AIFS, AIFSENS,
+  #         Pangu24, Aurora, DLWP, DLESyM.
+  prognostic_model: FCN3
+
+  # Forecast configuration.
+  lead_time_hours: 168        # 7 days
+  time_step_hours: 6
+  variables: [t2m, tp, u10m, v10m, sp, tcwv]
+
+  # Ensemble settings (earth2studio.run.ensemble).
+  ensemble:
+    enabled: true
+    members: 8                # production: 64-1000 (HENS-style)
+    perturbation: CorrelatedSphericalGaussian   # earth2studio.perturbation
+    noise_amplitude: 0.05
+    batch_size: 4
+
+  # Toy-tier stochastic weather generator. Produces a coarse (25 km) sequence
+  # whose statistics are set here, not learned.
+  toy_generator:
+    coarse_shape: [16, 16]        # ~25 km cells over the region
+    base_temperature_c: -2.0      # mean T2M at reference elevation
+    diurnal_amplitude_c: 4.5
+    warm_spell_amplitude_c: 6.0   # amplitude of the synoptic warm anomaly
+    warm_spell_centre_frac: 0.45  # position of the warm spell in the window
+    warm_spell_width_frac: 0.12
+    precip_base_mm_per_h: 0.35
+    precip_burst_mm_per_h: 9.0    # monsoon burst intensity
+    precip_burst_centre_frac: 0.55
+    precip_burst_width_frac: 0.06
+    ar1_correlation: 0.85         # temporal persistence of the noise field
+    spatial_correlation_km: 60.0
+    temperature_noise_c: 1.2
+    precip_noise_mm_per_h: 0.8
+    lapse_rate_c_per_km: 6.5      # dry-adiabatic-ish environmental lapse rate
+
+downscaling:
+  # Target grid for the localized forcing (matches the terrain grid).
+  target_resolution_m: 1000.0
+
+  # Earth2Studio diagnostic downscaler (earth2studio.models.dx).
+  # CorrDiff checkpoints are region-specific: CorrDiffTaiwan and CorrDiffCosmoEra5
+  # are NOT valid over the Hindu Kush Himalaya. A CorrDiff must be trained for this
+  # domain with PhysicsNeMo before the production tier is scientifically meaningful.
+  production_model: CorrDiff        # CorrDiff | CorrDiffTaiwan | CorrDiffCMIP6 | CBottleSR
+  production_checkpoint: null       # path to an HKH-trained CorrDiff package
+  samples: 4                        # generative samples per lead time
+
+  # PhysicsNeMo CorrDiff hyperparameters. Used by glof_pipeline.nvidia.corrdiff,
+  # which composes physicsnemo.models.diffusion_unets.SongUNetPosEmbd with
+  # physicsnemo.diffusion.preconditioners.EDMPreconditioner and samples with
+  # physicsnemo.diffusion.samplers.sample (Heun). These are the current APIs;
+  # the legacy EDMPrecondSuperResolution / deterministic_sampler are not used.
+  corrdiff:
+    model_channels: 64          # production: 128
+    channel_mult: [1, 2, 2]     # production: [1, 2, 2, 2, 2]
+    num_blocks: 2               # production: 4
+    attn_resolutions: []        # production: [28]
+    dropout: 0.0                # production: 0.13
+    bottleneck_attention: false
+    n_grid_channels: 4
+    gridtype: sinusoidal_octave   # 'sinusoidal' is legacy; only for old checkpoints
+    sigma_data: 0.5
+    sigma_min: 0.002
+    sigma_max: 80.0
+    rho: 7.0
+    p_mean: -1.2
+    p_std: 1.2
+    sampler_steps: 18
+    solver: heun                # heun | euler
+
+  # Toy tier: two-stage residual diffusion in the spirit of CorrDiff
+  # (deterministic regression + diffusion on the residual).
+  toy:
+    upsample_factor: 4
+    regression_channels: 32
+    diffusion_channels: 32
+    sampler_steps: 12
+    sigma_min: 0.02
+    sigma_max: 2.0
+    sigma_data: 0.5

@@ -1,0 +1,85 @@
+# ===========================================================================
+# Production tier: NVIDIA Earth-2 + PhysicsNeMo on a CUDA host.
+#
+#   pip install -r requirements-nvidia.txt
+#   export NGC_API_KEY=...           # for gated model packages
+#   glof run --config configs/production.yaml
+#
+# Read docs/PRODUCTION.md first: the CorrDiff downscaler and both surrogates
+# require checkpoints trained for THIS domain. Running with defaults will fetch
+# public packages that were not trained over the Hindu Kush Himalaya.
+# ===========================================================================
+include:
+  - toy.yaml
+
+runtime:
+  tier: production
+  device: cuda
+  output_dir: outputs/production
+
+domain:
+  synthetic:
+    nx: 512
+    ny: 512
+    dx: 30.0
+  dem_path: data/raw/himalayas_dem_30m.tif
+
+atmosphere:
+  prognostic_model: FCN3
+  data_source: GFS
+  ensemble:
+    enabled: true
+    members: 64
+    batch_size: 16
+
+downscaling:
+  corrdiff:
+    model_channels: 128
+    channel_mult: [1, 2, 2, 2, 2]
+    num_blocks: 4
+    attn_resolutions: [28]
+    dropout: 0.13
+    bottleneck_attention: true
+    sampler_steps: 18
+  production_model: CorrDiff
+  production_checkpoint: checkpoints/corrdiff_hkh   # must be trained for this domain
+  samples: 16
+
+routing:
+  solver:
+    horizon_hours: 12.0
+    output_interval_s: 60.0
+
+surrogates:
+  fno:
+    num_fno_modes: 32
+    latent_channels: 64
+    train_resolution: 256
+    rollout_steps: 24
+  mgn:
+    processor_size: 15
+    hidden_dim_processor: 128
+    hidden_dim_node_encoder: 128
+    hidden_dim_edge_encoder: 128
+    hidden_dim_node_decoder: 128
+
+datasets:
+  moraine:
+    n_scenarios: 20000
+  swe:
+    n_scenarios: 2000
+    frames_per_scenario: 64
+    resolution: 256
+  downscaling:
+    n_scenarios: 8000
+
+training:
+  mgn:
+    epochs: 300
+    batch_size: 32
+  fno:
+    epochs: 200
+    batch_size: 16
+  downscaler:
+    epochs: 400
+    batch_size: 32

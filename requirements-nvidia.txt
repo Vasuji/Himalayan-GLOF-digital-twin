@@ -1,0 +1,33 @@
+# Production tier: NVIDIA Earth-2 + PhysicsNeMo. Requires a CUDA-capable GPU for
+# training and Earth-2 inference; see docs/GCP_GPU.md.
+-r requirements.txt
+
+# --- hard version constraint ------------------------------------------------
+# nvidia-physicsnemo 2.2.1 requires torch >= 2.10. An older torch fails at IMPORT
+# time (physicsnemo.models -> physicsnemo.nn), not at call time, so install torch
+# for your CUDA build FIRST or pip may resolve a CPU-only wheel:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu126
+torch>=2.10
+
+nvidia-physicsnemo>=2.2.1      # PyPI distribution name; imported as `physicsnemo`
+earth2studio>=0.18.0
+
+# --- MeshGraphNet graph backend --------------------------------------------
+# DGL support was withdrawn upstream. BOTH of these are required: construction
+# succeeds with torch-geometric alone, but the forward pass raises
+# "MeshGraphNet requires PyTorch Geometric and torch_scatter". torch-scatter is
+# compiled against the installed torch and needs a C++ toolchain.
+torch-geometric>=2.6
+torch-scatter>=2.1
+torch-cluster>=1.6             # optional; used by other PhysicsNeMo graph models
+
+# --- geospatial / array IO -------------------------------------------------
+xarray>=2024.1
+zarr>=2.18
+netCDF4>=1.6
+rasterio>=1.3
+
+# --- Omniverse / USD -------------------------------------------------------
+# usd-core provides pxr for scene authoring. Publishing to a Nucleus server also
+# needs omni.client, which ships with Omniverse Kit and is NOT on PyPI.
+usd-core>=24.05

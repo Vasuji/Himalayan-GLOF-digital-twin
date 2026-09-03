@@ -1,0 +1,102 @@
+# ---------------------------------------------------------------------------
+# Terrain, glacier mass balance, moraine geotechnics, and breach formation.
+# Parameter values are order-of-magnitude representative of a Sikkim-Himalaya
+# moraine-dammed lake; they are defaults to be replaced by site survey data.
+# ---------------------------------------------------------------------------
+domain:
+  # Synthetic valley used by the toy tier. The production tier reads a real DEM.
+  synthetic:
+    nx: 160
+    ny: 160
+    dx: 50.0                     # m; 8.0 x 8.0 km domain
+    crest_elevation_m: 5240.0    # moraine crest
+    valley_slope: 0.045          # downvalley bed gradient
+    valley_half_width_m: 900.0
+    valley_wall_relief_m: 320.0
+    thalweg_meander_amplitude_m: 450.0
+    thalweg_meander_wavelength_m: 6000.0
+    moraine_centre_frac: 0.28    # fractional downvalley position of the dam
+    moraine_width_m: 480.0       # crest-normal base width; gives a ~30 deg face
+    moraine_height_m: 55.0       # ridge height above the valley floor
+    lake_basin_depth_m: 90.0     # over-deepening behind the dam
+    lake_basin_length_m: 1800.0
+    lake_basin_width_m: 800.0
+    freeboard_m: 10.0            # initial crest-to-water-surface distance
+
+  # Production tier DEM (e.g. Copernicus GLO-30, ALOS AW3D30, or a UAV survey).
+  dem_path: data/raw/himalayas_dem_30m.tif
+  dem_crs: EPSG:32645            # UTM 45N
+
+  # Downstream receptors for arrival-time reporting: fractional downvalley
+  # position and a label.
+  receptors:
+    - { name: Upper_settlement, position_frac: 0.55 }
+    - { name: Bridge_crossing,  position_frac: 0.72 }
+    - { name: Lower_town,       position_frac: 0.92 }
+
+glaciology:
+  # Degree-day melt model (Hock 2003 review; DDF in mm w.e. per degC per day).
+  ddf_ice_mm_per_c_per_day: 7.0
+  ddf_snow_mm_per_c_per_day: 4.0
+  melt_threshold_c: 0.0
+  rain_snow_threshold_c: 1.0
+  catchment_area_km2: 78.0
+  glacierised_fraction: 0.42
+  runoff_coefficient: 0.85
+  initial_snow_water_equivalent_mm: 180.0
+  # Baseflow leaving the lake through the moraine when it is not breaching.
+  baseflow_m3_per_s: 2.5
+
+moraine:
+  # Effective-stress Mohr-Coulomb parameters for an ice-cored lateral moraine.
+  cohesion_kpa: 5.0
+  friction_angle_deg: 38.0      # bouldery ice-cored till
+  unit_weight_saturated_kn_per_m3: 20.0
+  unit_weight_water_kn_per_m3: 9.81
+  till_depth_m: 25.0             # depth of the potential failure slab
+  # Internal erosion. Two criteria are evaluated and both are reported:
+  #   * Terzaghi heave, i_c = (G_s - 1)/(1 + e), appropriate for uniform upward seepage;
+  #   * backward erosion piping along a concentrated leak path, which is the mechanism
+  #     actually documented for ice-cored moraine dams (a thawed conduit is far shorter
+  #     than the dam is wide, so the local gradient is much larger than the average).
+  # The configured trigger applies to the backward-erosion ratio.
+  specific_gravity_solids: 2.68
+  void_ratio: 0.55
+  piping_path_fraction: 0.26            # concentrated leak path / dam base width
+  backward_erosion_critical_gradient: 0.30
+  seepage_path_length_m: 480.0   # equal to the moraine base width by default
+  # Ice core degrades with cumulative positive degree-days, reducing cohesion.
+  ice_core_fraction: 0.30
+  thermal_degradation_per_pdd: 0.0025   # fractional cohesion loss per degC-day
+  # Failure declared when any of these is true.
+  triggers:
+    min_factor_of_safety: 1.0
+    piping_gradient_ratio: 1.0
+    overtopping_freeboard_m: 0.0
+
+breach:
+  # Froehlich (2008) geometric regressions plus a broad-crested weir outflow.
+  froehlich_overtopping_coefficient: 1.3   # k_o; 1.0 for piping/seepage failure
+  side_slope_h_per_v: 1.0
+  weir_coefficient_rectangular: 1.7        # SI broad-crested weir
+  weir_coefficient_triangular: 1.35
+  min_breach_depth_m: 5.0
+  time_step_s: 5.0
+  max_duration_s: 21600.0                  # 6 h
+
+surrogates:
+  mgn:
+    # PhysicsNeMo MeshGraphNet (physicsnemo.models.meshgraphnet.MeshGraphNet).
+    node_features: 9
+    edge_features: 4
+    output_dim: 2                 # [log factor of safety, pore-pressure ratio]
+    processor_size: 8             # production: 15
+    hidden_dim_processor: 96      # production: 128
+    hidden_dim_node_encoder: 96
+    hidden_dim_edge_encoder: 96
+    hidden_dim_node_decoder: 96
+    num_layers_node_processor: 2
+    num_layers_edge_processor: 2
+    aggregation: sum
+    neighbours: 8                 # grid connectivity degree
+    checkpoint: checkpoints/mgn_moraine.pt

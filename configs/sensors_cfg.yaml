@@ -1,0 +1,29 @@
+# ---------------------------------------------------------------------------
+# "Million Eyes": in-situ network and ensemble Kalman assimilation.
+# ---------------------------------------------------------------------------
+sensors:
+  enabled: true
+  network:
+    weather_stations: 12
+    piezometers: 8
+    strain_gauges: 6
+    stream_gauges: 4
+  # Observation error standard deviations (used both to corrupt synthetic
+  # observations and as the diagonal of R in the analysis).
+  noise:
+    air_temperature_c: 0.35
+    precipitation_mm_per_h: 0.6
+    lake_stage_m: 0.05
+    piezometric_head_m: 0.25
+    strain_microstrain: 15.0
+  # Fraction of scheduled observations that fail to arrive (telemetry dropout).
+  dropout_probability: 0.08
+  assimilation:
+    method: enkf
+    ensemble_size: 32
+    inflation: 1.04             # multiplicative covariance inflation
+    localization_radius_m: 3000.0
+    cycle_hours: 6.0
+    # State vector estimated by the filter.
+    state_variables: [lake_level_m, pore_pressure_ratio, ddf_ice_mm_per_c_per_day]
+    state_prior_std: [0.40, 0.05, 1.2]

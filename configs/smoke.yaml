@@ -1,0 +1,81 @@
+# ===========================================================================
+# Smoke tier: the same end-to-end graph shrunk so CI (and a laptop unit test)
+# executes every stage in well under a minute. Used by tests/test_end_to_end.py.
+# ===========================================================================
+include:
+  - toy.yaml
+
+runtime:
+  seed: 7
+  output_dir: outputs/smoke
+
+domain:
+  synthetic:
+    nx: 48
+    ny: 48
+    dx: 250.0
+
+atmosphere:
+  lead_time_hours: 48
+  ensemble:
+    members: 3
+    batch_size: 3
+  toy_generator:
+    coarse_shape: [8, 8]
+
+downscaling:
+  samples: 1
+  corrdiff:
+    model_channels: 8
+    channel_mult: [1, 2]
+    num_blocks: 1
+    attn_resolutions: []
+    sampler_steps: 2
+  toy:
+    upsample_factor: 2
+    regression_channels: 8
+    diffusion_channels: 8
+    sampler_steps: 4
+
+routing:
+  solver:
+    horizon_hours: 0.35
+    output_interval_s: 120.0
+
+surrogates:
+  fno:
+    num_fno_modes: 6
+    latent_channels: 8
+    decoder_layer_size: 16
+    train_resolution: 24
+    rollout_steps: 3
+  mgn:
+    processor_size: 2
+    hidden_dim_processor: 16
+    hidden_dim_node_encoder: 16
+    hidden_dim_edge_encoder: 16
+    hidden_dim_node_decoder: 16
+
+datasets:
+  moraine:
+    n_scenarios: 24
+  swe:
+    n_scenarios: 3
+    frames_per_scenario: 6
+    resolution: 24
+  downscaling:
+    n_scenarios: 12
+
+training:
+  mgn: { epochs: 3, batch_size: 4 }
+  fno: { epochs: 3, batch_size: 2 }
+  downscaler: { epochs: 3, batch_size: 4 }
+
+sensors:
+  assimilation:
+    ensemble_size: 8
+
+visualization:
+  make_figures: false
+  export_usd: true
+  usd_frames: 4

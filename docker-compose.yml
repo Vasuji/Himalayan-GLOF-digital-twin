@@ -1,0 +1,26 @@
+# Mount data, outputs and checkpoints from the host so nothing that costs
+# GPU-hours lives inside a container layer.
+services:
+  glof:
+    build: .
+    image: glof-twin:latest
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY:-}
+      - WARP_CACHE_PATH=/workspace/.warp_cache
+    volumes:
+      - ./data:/workspace/data
+      - ./outputs:/workspace/outputs
+      - ./checkpoints:/workspace/checkpoints
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: ["info"]
+
+  # docker compose run --rm smoke
+  smoke:
+    extends: glof
+    command: ["run", "--config", "configs/smoke.yaml"]

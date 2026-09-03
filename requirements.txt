@@ -1,0 +1,10 @@
+# Toy tier - runs the complete end-to-end pipeline on CPU (no GPU, no NGC credentials).
+numpy>=1.26
+scipy>=1.11
+pyyaml>=6.0
+torch>=2.4
+matplotlib>=3.8
+
+# --- Production tier (GPU) -------------------------------------------------
+# Install on a CUDA host; see requirements-nvidia.txt. Kept separate because
+# nvidia-physicsnemo and earth2studio pull large CUDA-only dependency trees.

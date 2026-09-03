@@ -1,0 +1,92 @@
+# ===========================================================================
+# Toy tier: the complete end-to-end pipeline on a CPU laptop.
+#
+#   glof run --config configs/toy.yaml
+#
+# Every stage runs real numerics or a real trained network. Nothing is stubbed.
+# ===========================================================================
+include:
+  - atmospheric_cfg.yaml
+  - hydrology_cfg.yaml
+  - swe_routing_cfg.yaml
+  - sensors_cfg.yaml
+
+runtime:
+  tier: toy                 # toy | production
+  device: cpu               # cpu | cuda
+  seed: 20260901
+  output_dir: outputs/toy
+  data_dir: data
+  checkpoint_dir: checkpoints
+  log_level: INFO
+
+# PhysicsNeMo CorrDiff, sized for CPU. The production block in
+# configs/atmospheric_cfg.yaml carries the full-width settings.
+downscaling:
+  samples: 2
+  corrdiff:
+    model_channels: 16
+    channel_mult: [1, 2]
+    num_blocks: 1
+    attn_resolutions: []
+    dropout: 0.0
+    bottleneck_attention: false
+    sampler_steps: 8
+
+datasets:
+  moraine:
+    n_scenarios: 256
+    path: data/processed/moraine_dataset.npz
+    val_fraction: 0.2
+  swe:
+    n_scenarios: 12
+    frames_per_scenario: 24
+    resolution: 64
+    path: data/processed/swe_dataset.npz
+    val_fraction: 0.25
+  downscaling:
+    n_scenarios: 96
+    path: data/processed/downscaling_dataset.npz
+    val_fraction: 0.2
+
+training:
+  mgn:
+    epochs: 60
+    batch_size: 8
+    learning_rate: 1.0e-3
+    weight_decay: 1.0e-5
+    lr_gamma: 0.98
+  fno:
+    epochs: 40
+    batch_size: 8
+    learning_rate: 2.0e-3
+    weight_decay: 1.0e-6
+    lr_gamma: 0.97
+    spectral_loss_weight: 0.15
+    mass_loss_weight: 0.05
+  downscaler:
+    epochs: 40
+    batch_size: 8
+    learning_rate: 2.0e-3
+    lr_gamma: 0.97
+
+evaluation:
+  # Compare the surrogate rollout against the reference finite-volume solver.
+  benchmark_solver: true
+  metrics: [rmse, relative_l2, mass_conservation, arrival_time_error]
+  breach_probability_bins: 10
+
+visualization:
+  make_figures: true
+  dpi: 160
+  export_usd: true
+  usd_path: outputs/toy/flood_wave.usda
+  usd_frames: 24
+  # NVIDIA Omniverse scene authoring. The exporter writes a layered USD stage
+  # (terrain + animated water sublayers) with materials, lighting and a camera.
+  omniverse:
+    publish: false            # copy the scene to a Nucleus server after authoring
+    nucleus_url: null         # e.g. omniverse://nucleus.local/Projects/Himalayas
+    water_opacity: 0.72
+    water_colour: [0.10, 0.32, 0.55]
+    frames_per_second: 12.0
